@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<base target="_top">
+<title>방문 시간 안내</title>
+<style>
+:root {
+  --bg: #f2f4f7; --panel: #ffffff; --ink: #101828; --sub: #475467; --muted: #98a2b3; --line: #d0d5dd;
+  --blue: #1d4ed8; --on-blue: #ffffff; --blue-soft: #e0eaff;
+  --green: #067647; --green-soft: #dcfae6; --red: #d92d20;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0c111d; --panel: #161b26; --ink: #f5f5f6; --sub: #cecfd2; --muted: #85888e; --line: #333741;
+    --blue: #528bff; --on-blue: #0c111d; --blue-soft: #1c2a4d;
+    --green: #47cd89; --green-soft: #0f2e1f; --red: #f97066;
+  }
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--bg); color: var(--ink); }
+body { font: 17px/1.5 "Pretendard", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif; -webkit-text-size-adjust: 100%; }
+button, select, textarea { font: inherit; color: inherit; }
+[hidden] { display: none !important; }
+.wrap { max-width: 480px; margin: 0 auto; padding: 18px 16px 40px; }
+.shop { margin: 0 4px 12px; font-size: 18px; font-weight: 800; }
+.loading { margin: 60px 0; color: var(--sub); text-align: center; }
+.hero { padding: 22px 20px; border-radius: 16px; background: var(--panel); }
+.plate { display: inline-block; padding: 2px 12px; border: 2px solid var(--ink); border-radius: 8px; font-size: 24px; font-weight: 800; letter-spacing: 1px; }
+h1 { margin: 14px 0 6px; font-size: 24px; line-height: 1.35; }
+.lead { margin: 0; color: var(--sub); }
+.current { margin: 12px 0 0; padding: 12px 14px; border-radius: 12px; background: var(--blue-soft); color: var(--ink); font-size: 16px; }
+.current b { color: var(--blue); }
+.q { margin: 24px 4px 10px; font-size: 18px; font-weight: 800; }
+.grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.opt { min-height: 62px; padding: 10px; border: 1.5px solid var(--line); border-radius: 14px; background: var(--panel); font-size: 19px; font-weight: 700; cursor: pointer; }
+.opt.wide { grid-column: 1 / -1; font-size: 17px; }
+.opt.on { border-color: var(--blue); background: var(--blue-soft); color: var(--blue); }
+.opt:disabled { opacity: .5; }
+.panel { margin-top: 10px; padding: 16px; border: 1.5px solid var(--blue); border-radius: 14px; background: var(--panel); }
+.seg { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px; }
+.seg button { padding: 10px; border: 1.5px solid var(--line); border-radius: 10px; background: var(--bg); font-weight: 700; cursor: pointer; }
+.seg button.on { border-color: var(--blue); background: var(--blue-soft); color: var(--blue); }
+.seg button:disabled { opacity: .4; }
+select, textarea { width: 100%; padding: 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--bg); font-size: 18px; }
+textarea { min-height: 96px; resize: vertical; }
+.send { width: 100%; min-height: 56px; margin-top: 12px; border: 0; border-radius: 14px; background: var(--blue); color: var(--on-blue); font-size: 18px; font-weight: 800; cursor: pointer; }
+.send:disabled { opacity: .6; }
+.call { display: block; margin: 18px auto 0; padding: 8px; border: 0; background: none; color: var(--sub); font-size: 15px; text-decoration: underline; cursor: pointer; }
+.err { min-height: 1.5em; margin: 10px 4px 0; color: var(--red); font-size: 15px; }
+.done { padding: 28px 20px; border-radius: 16px; background: var(--panel); text-align: center; }
+.check { display: grid; place-items: center; width: 64px; height: 64px; margin: 0 auto 4px; border-radius: 50%; background: var(--green-soft); color: var(--green); font-size: 34px; font-weight: 800; }
+.answer { margin: 16px 0 10px; padding: 14px; border-radius: 12px; background: var(--bg); font-size: 21px; font-weight: 800; overflow-wrap: anywhere; }
+.answer small { display: block; margin-bottom: 2px; color: var(--sub); font-size: 13px; font-weight: 600; }
+.answer .said { display: block; margin-top: 6px; color: var(--sub); font-size: 14px; font-weight: 500; }
+.again { margin-top: 16px; padding: 10px 18px; border: 1.5px solid var(--line); border-radius: 12px; background: var(--panel); font-weight: 700; cursor: pointer; }
+.foot { display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; margin-top: 28px; }
+.foot a { padding: 10px 16px; border: 1px solid var(--line); border-radius: 999px; background: var(--panel); color: var(--ink); font-size: 15px; font-weight: 700; text-decoration: none; }
+.note { margin-top: 14px; color: var(--muted); font-size: 12px; text-align: center; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="shop" id="shop"></div>
+  <p class="loading" id="loading" hidden>불러오는 중…</p>
+
+  <div id="ask" hidden>
+    <div class="hero">
+      <span class="plate" id="plate"></span>
+      <h1>정비가 끝났습니다</h1>
+      <p class="lead">주차장 운영을 위해 차를 찾으러 오실 시간을 알려주세요.</p>
+      <p class="current" id="current" hidden></p>
+    </div>
+    <p class="q">언제쯤 오실 예정인가요?</p>
+    <div class="grid">
+      <button type="button" class="opt" data-min="30">30분 후</button>
+      <button type="button" class="opt" data-min="60">1시간 후</button>
+      <button type="button" class="opt" data-min="120">2시간 후</button>
+      <button type="button" class="opt" data-open="pick">시간 고르기</button>
+      <button type="button" class="opt wide" data-open="write">직접 쓰기 (예: 4시쯤 갈게요)</button>
+    </div>
+    <div class="panel" id="pick" hidden>
+      <div class="seg"><button type="button" data-day="0">오늘</button><button type="button" data-day="1">내일</button></div>
+      <select id="time" aria-label="방문 시각"></select>
+      <button type="button" class="send" id="sendPick">이 시간에 갈게요</button>
+    </div>
+    <div class="panel" id="write" hidden>
+      <textarea id="text" maxlength="200" aria-label="보낼 내용" placeholder="예: 4시쯤 방문합니다 / 내일 오전에 갈게요"></textarea>
+      <button type="button" class="send" id="sendText">보내기</button>
+    </div>
+    <p class="err" id="err" role="alert"></p>
+    <button type="button" class="call" id="callMe">시간을 잘 모르겠어요 · 전화 주세요</button>
+  </div>
+
+  <div class="done" id="done" hidden>
+    <div class="check">✓</div>
+    <h1 id="doneTitle"></h1>
+    <div class="answer" id="answer"></div>
+    <p class="lead" id="doneText"></p>
+    <button type="button" class="again" id="again">다시 알려주기</button>
+  </div>
+
+  <div class="done" id="gone" hidden>
+    <h1>끝난 안내입니다</h1>
+    <p class="lead">이미 출고되었거나 주소가 맞지 않습니다.<br>궁금하신 점은 아래로 연락 주세요.</p>
+  </div>
+
+  <div class="foot" id="foot"></div>
+  <p class="note" id="note" hidden>미리보기 화면입니다. 실제로 저장되지 않습니다.</p>
+</div>
+<script>
+// 바깥 사이트(GitHub 등)에 올릴 때만 웹 앱 주소가 들어간다. Apps Script 안에서는 비어 있어도 된다.
+const API_URL = 'https://script.google.com/macros/s/AKfycbwQHx_W1eVE5vBll4Ymu9mATytcJ5ZByiqESQhg79tdsKzoo_Cdd3BplN-Mp8w6k7nc5A/exec';
+const MIN = 60 * 1000;
+const $ = id => document.getElementById(id);
+
+// 세 가지 방식으로 열린다: Apps Script 화면(gas) / 바깥 사이트(api) / 파일을 그냥 연 미리보기(demo)
+let info = null;
+let mode = 'demo';
+try {
+  info = JSON.parse($('boot').textContent);
+  mode = 'gas';
+} catch (e) {
+  if (API_URL) mode = 'api';
+}
+let day = 0;
+let sending = false;
+
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c =>
+  ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+const pad = n => String(n).padStart(2, '0');
+const clockKo = (h, m) => (h < 12 ? '오전 ' : '오후 ') + (h % 12 || 12) + '시' + (m ? ' ' + m + '분' : '');
+function whenKo(ms) {
+  const d = new Date(ms);
+  const days = Math.round((new Date(ms).setHours(0, 0, 0, 0) - new Date().setHours(0, 0, 0, 0)) / 864e5);
+  const dayText = days === 0 ? '오늘' : days === 1 ? '내일' : `${d.getMonth() + 1}월 ${d.getDate()}일`;
+  return dayText + ' ' + clockKo(d.getHours(), d.getMinutes());
+}
+
+/** 30분 간격 방문 시각 (오전 8시 ~ 오후 8시, 지금부터 15분 이내·지난 시각은 뺀다) */
+function slots(dayOffset) {
+  const out = [];
+  const from = Date.now() + 15 * MIN;
+  for (let h = 8; h <= 20; h++) {
+    for (const m of [0, 30]) {
+      if (h === 20 && m) continue;
+      const d = new Date();
+      d.setDate(d.getDate() + dayOffset);
+      d.setHours(h, m, 0, 0);
+      if (d.getTime() >= from) out.push([pad(h) + ':' + pad(m), clockKo(h, m)]);
+    }
+  }
+  return out;
+}
+
+function setDay(d) {
+  day = d;
+  document.querySelectorAll('[data-day]').forEach(b => b.classList.toggle('on', Number(b.dataset.day) === d));
+  $('time').innerHTML = slots(d).map(([v, label]) => `<option value="${v}">${label}</option>`).join('');
+}
+
+function openPanel(name) {
+  ['pick', 'write'].forEach(p => { $(p).hidden = p !== name; });
+  document.querySelectorAll('[data-open]').forEach(b => b.classList.toggle('on', b.dataset.open === name));
+  $('err').textContent = '';
+  if (name === 'pick') {
+    const todayOk = slots(0).length > 0;
+    document.querySelector('[data-day="0"]').disabled = !todayOk;
+    setDay(todayOk ? 0 : 1);
+  }
+  if (name === 'write') $('text').focus();
+}
+
+/** 답 보내기: 결과로 { status, reply, visitAt } 를 받는다 */
+function sendReply(choice) {
+  if (mode === 'gas') {
+    return new Promise((ok, fail) =>
+      google.script.run.withSuccessHandler(ok).withFailureHandler(fail).submitReply(info.id, choice));
+  }
+  if (mode === 'api') {
+    return fetch(API_URL, { method: 'POST', body: JSON.stringify({ t: info.id, choice }) })
+      .then(r => r.json())
+      .then(d => {
+        if (!d.ok) throw new Error(d.error || '보내지 못했습니다.');
+        return d;
+      });
+  }
+  // 미리보기: 서버 없이 결과만 흉내 낸다
+  let visitAt = choice.kind === 'after' ? Date.now() + choice.min * MIN : null;
+  if (choice.kind === 'at') {
+    const d = new Date();
+    d.setDate(d.getDate() + choice.day);
+    d.setHours(...choice.time.split(':').map(Number), 0, 0);
+    visitAt = d.getTime();
+  }
+  return new Promise(ok => setTimeout(() => ok({
+    status: choice.kind === 'call' ? '전화요청' : '방문예정',
+    reply: choice.kind === 'text' ? '“' + choice.text + '”' : '',
+    visitAt
+  }), 400));
+}
+
+async function submit(choice) {
+  if (sending) return;
+  sending = true;
+  $('err').textContent = '';
+  const buttons = [...document.querySelectorAll('#ask button')].filter(b => !b.disabled);
+  buttons.forEach(b => { b.disabled = true; });
+  try {
+    Object.assign(info, await sendReply(choice));
+    show('done');
+  } catch (e) {
+    $('err').textContent = String((e && e.message) || '보내지 못했습니다. 잠시 후 다시 눌러 주세요.').replace(/^(Error|Exception):\s*/, '');
+  } finally {
+    sending = false;
+    buttons.forEach(b => { b.disabled = false; });
+  }
+}
+
+/** 이미 알려 준 내용 (다시 들어왔을 때 위에 보여 주고, 바뀌었으면 바로 다시 고르게 한다) */
+function currentHtml() {
+  if (info.status === '전화요청') return '<b>전화 요청</b>을 남기셨어요.<br>시간이 정해지면 아래에서 골라 주세요.';
+  const said = info.reply.startsWith('“') ? info.reply : '';
+  const what = info.visitAt ? whenKo(info.visitAt) : esc(said || info.reply);
+  return `지금 알려 주신 시간: <b>${what}</b><br>바뀌었으면 아래에서 다시 골라 주세요.`;
+}
+
+/** view: 'ask' = 고르는 화면, 'done' = 보낸 직후 확인 화면 */
+function show(view) {
+  $('loading').hidden = true;
+  $('shop').textContent = info.shop || '';
+  if (info.shop) document.title = info.shop + ' · 방문 시간 안내';
+  $('plate').textContent = info.plate || '';
+  const links = [];
+  if (info.tel) links.push(`<a href="tel:${esc(info.tel.replace(/[^\d+]/g, ''))}">📞 전화 ${esc(info.tel)}</a>`);
+  if (info.kakao) links.push(`<a href="${esc(info.kakao)}">💬 카톡 상담</a>`);
+  $('foot').innerHTML = links.join('');
+  $('note').hidden = mode !== 'demo';
+
+  const answered = info.status === '방문예정' || info.status === '전화요청';
+  const done = info.found && view === 'done';
+  $('gone').hidden = !!info.found;
+  $('ask').hidden = !info.found || done;
+  $('done').hidden = !done;
+  $('current').hidden = !answered;
+  if (answered) $('current').innerHTML = currentHtml();
+  if (!done) return;
+
+  if (info.status === '전화요청') {
+    $('doneTitle').textContent = '확인했습니다';
+    $('answer').innerHTML = '<small>요청하신 내용</small>전화 연락';
+    $('doneText').textContent = '곧 전화드리겠습니다.';
+    return;
+  }
+  const said = info.reply.startsWith('“') ? info.reply : '';
+  $('doneTitle').textContent = '전달되었습니다';
+  $('answer').innerHTML = info.visitAt
+    ? `<small>방문 예정</small>${whenKo(info.visitAt)}${said ? `<span class="said">보내신 말: ${esc(said)}</span>` : ''}`
+    : `<small>보내신 내용</small>${esc(info.reply)}`;
+  $('doneText').textContent = '감사합니다. 시간이 바뀌면 이 링크로 다시 알려 주세요.';
+}
+
+document.querySelectorAll('[data-min]').forEach(b =>
+  b.addEventListener('click', () => submit({ kind: 'after', min: Number(b.dataset.min) })));
+document.querySelectorAll('[data-open]').forEach(b => b.addEventListener('click', () => openPanel(b.dataset.open)));
+document.querySelectorAll('[data-day]').forEach(b => b.addEventListener('click', () => setDay(Number(b.dataset.day))));
+$('sendPick').addEventListener('click', () => {
+  if ($('time').value) submit({ kind: 'at', day, time: $('time').value });
+});
+$('sendText').addEventListener('click', () => {
+  const text = $('text').value.trim();
+  if (!text) {
+    $('err').textContent = '내용을 입력해 주세요.';
+    return;
+  }
+  submit({ kind: 'text', text });
+});
+$('callMe').addEventListener('click', () => submit({ kind: 'call' }));
+$('again').addEventListener('click', () => {
+  openPanel('');
+  show('ask');
+  window.scrollTo(0, 0);
+});
+
+if (mode === 'api') {
+  $('loading').hidden = false;
+  const code = new URLSearchParams(location.search).get('t') || '';
+  fetch(API_URL + '?api=info&t=' + encodeURIComponent(code))
+    .then(r => r.json())
+    .then(d => {
+      info = d;
+      show('ask');
+    })
+    .catch(() => { $('loading').textContent = '연결이 원활하지 않습니다. 잠시 후 다시 열어 주세요.'; });
+} else {
+  if (mode === 'demo') {
+    info = { shop: 'OO자동차 정비센터', tel: '02-123-4567', kakao: 'https://pf.kakao.com/', id: 'kdemo',
+      found: true, plate: '12가3456', status: '응답대기', reply: '', visitAt: null };
+  }
+  show('ask');
+}
+</script>
+</body>
+</html>
